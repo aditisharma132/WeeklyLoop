@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, Moon } from "lucide-react";
 import { format } from "date-fns";
+import { useSession, signIn } from "next-auth/react";
 import ScheduleTimeline, { ScheduleTask } from "@/components/ScheduleTimeline";
 import ProgressRings from "@/components/ProgressRings";
 import PatternInsights, { Insight } from "@/components/PatternInsights";
@@ -28,6 +29,7 @@ const mockInsights: Insight[] = [
 ];
 
 export default function Dashboard() {
+    const { data: session } = useSession();
     const [tasks, setTasks] = useState<ScheduleTask[]>(mockTasks);
     const [isAiProcessing, setIsAiProcessing] = useState(false);
     const [aiMessage, setAiMessage] = useState("");
@@ -63,6 +65,10 @@ export default function Dashboard() {
     };
 
     const simulateAiRearrange = async (prompt: string) => {
+        if (!session) {
+            signIn("google");
+            return;
+        }
         setIsAiProcessing(true);
         setAiMessage(prompt);
         try {
@@ -172,7 +178,13 @@ export default function Dashboard() {
                     </div>
 
                     <button
-                        onClick={() => setIsFeedbackOpen(true)}
+                        onClick={() => {
+                            if (!session) {
+                                signIn("google");
+                            } else {
+                                setIsFeedbackOpen(true);
+                            }
+                        }}
                         className="w-full relative group overflow-hidden glass-panel p-6 rounded-3xl flex items-center justify-center gap-3 transition-colors hover:border-purple-500/50"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -182,7 +194,13 @@ export default function Dashboard() {
                 </section>
             </div>
 
-            <VoiceInput onSubmit={(text) => simulateAiRearrange(text)} />
+            <VoiceInput onSubmit={(text) => {
+                if (!session) {
+                    signIn("google");
+                } else {
+                    simulateAiRearrange(text);
+                }
+            }} />
 
             <FeedbackModal
                 isOpen={isFeedbackOpen}

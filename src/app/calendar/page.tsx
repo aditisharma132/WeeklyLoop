@@ -4,12 +4,36 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+import { ScheduleTask } from "@/components/ScheduleTimeline";
 
 type ViewMode = "week" | "month";
 
 export default function CalendarPage() {
+    const { data: session } = useSession();
     const [view, setView] = useState<ViewMode>("week");
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [tasks, setTasks] = useState<ScheduleTask[]>([]);
+
+    useEffect(() => {
+        if (!session) {
+            setTasks([]);
+            return;
+        }
+        const loadData = async () => {
+            try {
+                const res = await fetch('/api/schedule');
+                const data = await res.json();
+                if (data.success && data.schedule?.tasks) {
+                    setTasks(data.schedule.tasks);
+                }
+            } catch (e) {
+                console.error("Failed to load schedule", e);
+            }
+        };
+        loadData();
+    }, [session]);
 
     const nextTime = () => {
         if (view === "week") setCurrentDate(addWeeks(currentDate, 1));
@@ -34,10 +58,12 @@ export default function CalendarPage() {
 
     const days = view === "week" ? generateWeekDays() : generateMonthDays();
 
-    // Mock items for visual flair
+    // Since our backend currently only gives today's schedule, we will only show items on today
+    // In a full implementation, this would check tasks against the specific day
     const hasItems = (date: Date) => {
-        // Randomly scatter some dots for visual effect
-        return date.getDate() % 3 === 0 || date.getDate() % 5 === 0;
+        if (!session) return false;
+        if (isSameDay(date, new Date()) && tasks.length > 0) return true;
+        return false;
     };
 
     return (
@@ -96,19 +122,21 @@ export default function CalendarPage() {
                                         {format(day, "d")}
                                     </div>
                                 </div>
-                                <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 p-2 min-h-[300px]">
-                                    {hasItems(day) && (
-                                        <div className="bg-primary/20 border border-primary/30 rounded-xl p-3 mb-2">
-                                            <div className="text-xs font-bold text-primary mb-1">Morning Run</div>
-                                            <div className="text-[10px] text-white/50">07:00 - 08:00</div>
-                                        </div>
-                                    )}
-                                    {isSameDay(day, new Date()) && (
-                                        <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-3 mb-2">
-                                            <div className="text-xs font-bold text-yellow-500 mb-1">Deep Work</div>
-                                            <div className="text-[10px] text-white/50">10:00 - 12:00</div>
-                                        </div>
-                                    )}
+                                <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 p-2 min-h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                                    {isSameDay(day, new Date()) && session && tasks.map(task => {
+                                        // A simple color mapping for tasks
+                                        const colorClass = task.category === 'health' ? 'bg-green-500/20 border-green-500/30 text-green-500' 
+                                            : task.category === 'work' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+                                            : task.category === 'meal' ? 'bg-amber-500/20 border-amber-500/30 text-amber-500'
+                                            : 'bg-primary/20 border-primary/30 text-primary';
+                                        
+                                        return (
+                                            <div key={task.id} className={`border rounded-xl p-3 mb-2 ${colorClass}`}>
+                                                <div className="text-xs font-bold mb-1 truncate">{task.title}</div>
+                                                <div className="text-[10px] text-white/50">{task.startTime} - {task.endTime}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}

@@ -16,10 +16,19 @@ export default function OnboardPage() {
     // Form State
     const [goal, setGoal] = useState("");
     const [priorities, setPriorities] = useState<string[]>([]);
-    const [wakeTime, setWakeTime] = useState("07:00");
-    const [sleepTime, setSleepTime] = useState("23:00");
+    
+    // Current vs Desired Rhythm
+    const [currentWakeTime, setCurrentWakeTime] = useState("08:00");
+    const [currentSleepTime, setCurrentSleepTime] = useState("23:30");
+    const [desiredWakeTime, setDesiredWakeTime] = useState("07:00");
+    const [desiredSleepTime, setDesiredSleepTime] = useState("22:30");
 
-    const totalSteps = 4;
+    // Meals & Free time
+    const [lunchTime, setLunchTime] = useState("13:00");
+    const [dinnerTime, setDinnerTime] = useState("19:30");
+    const [chillTime, setChillTime] = useState("21:00");
+
+    const totalSteps = 6;
 
     const handleNext = () => {
         if (step < totalSteps) setStep(step + 1);
@@ -32,7 +41,17 @@ export default function OnboardPage() {
     const handleComplete = async () => {
         setIsSubmitting(true);
         try {
-            const profile = { goal, priorities, routine: { wakeTime, sleepTime } };
+            const profile = { 
+                goal, 
+                priorities, 
+                routine: { 
+                    currentWakeTime, currentSleepTime, 
+                    desiredWakeTime, desiredSleepTime 
+                },
+                mealsAndFreeTime: {
+                    lunchTime, dinnerTime, chillTime
+                }
+            };
             const response = await fetch('/api/onboard', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -52,27 +71,14 @@ export default function OnboardPage() {
         }
     };
 
-    // Variants for smooth step sliding
     const slideVariants = {
-        enter: (direction: number) => ({
-            x: direction > 0 ? 50 : -50,
-            opacity: 0
-        }),
-        center: {
-            zIndex: 1,
-            x: 0,
-            opacity: 1
-        },
-        exit: (direction: number) => ({
-            zIndex: 0,
-            x: direction < 0 ? 50 : -50,
-            opacity: 0
-        })
+        enter: (direction: number) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
+        center: { zIndex: 1, x: 0, opacity: 1 },
+        exit: (direction: number) => ({ zIndex: 0, x: direction < 0 ? 50 : -50, opacity: 0 })
     };
 
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
-            {/* Background elements */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
@@ -87,7 +93,7 @@ export default function OnboardPage() {
                             transition={{ duration: 0.4 }}
                         />
                     </div>
-                    {[1, 2, 3, 4].map((i) => (
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
                         <motion.div
                             key={i}
                             className={`w-10 h-10 rounded-full flex items-center justify-center relative z-10 transition-colors duration-300 ${i <= step ? "bg-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "bg-card border border-white/10 text-white/30"
@@ -102,13 +108,7 @@ export default function OnboardPage() {
                 <div className="glass-panel p-8 md:p-12 rounded-3xl border border-white/5 shadow-2xl relative min-h-[400px]">
                     <AnimatePresence mode="wait" custom={1}>
                         {step === 1 && (
-                            <motion.div
-                                key="step1"
-                                variants={slideVariants}
-                                initial="enter" animate="center" exit="exit"
-                                transition={{ duration: 0.3 }}
-                                className="space-y-6"
-                            >
+                            <motion.div key="step1" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
                                     <h2 className="text-3xl font-bold mb-2">What's your primary goal?</h2>
                                     <p className="text-white/60">Having a clear monthly goal helps the AI prioritize your schedule.</p>
@@ -128,13 +128,7 @@ export default function OnboardPage() {
                         )}
 
                         {step === 2 && (
-                            <motion.div
-                                key="step2"
-                                variants={slideVariants}
-                                initial="enter" animate="center" exit="exit"
-                                transition={{ duration: 0.3 }}
-                                className="space-y-6"
-                            >
+                            <motion.div key="step2" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
                                     <h2 className="text-3xl font-bold mb-2">Your Priorities</h2>
                                     <p className="text-white/60">List the things that must happen every week. We'll build around these.</p>
@@ -144,40 +138,47 @@ export default function OnboardPage() {
                         )}
 
                         {step === 3 && (
-                            <motion.div
-                                key="step3"
-                                variants={slideVariants}
-                                initial="enter" animate="center" exit="exit"
-                                transition={{ duration: 0.3 }}
-                                className="space-y-6"
-                            >
+                            <motion.div key="step3" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
                                 <div>
-                                    <h2 className="text-3xl font-bold mb-2">Daily Rhythm</h2>
-                                    <p className="text-white/60">When do your days typically start and end?</p>
+                                    <h2 className="text-3xl font-bold mb-2">Current Rhythm</h2>
+                                    <p className="text-white/60">When do you *actually* wake up and sleep right now? Be honest!</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-6 pt-4">
-                                    <TimeSlotPicker label="Ideal Wake Time" value={wakeTime} onChange={setWakeTime} />
-                                    <TimeSlotPicker label="Ideal Sleep Time" value={sleepTime} onChange={setSleepTime} />
-                                </div>
-                                <div className="mt-8 p-6 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                                        <Sparkles className="w-5 h-5" />
-                                    </div>
-                                    <p className="text-white/70 text-sm leading-relaxed">
-                                        Don't worry if you miss these times. WeeklyLoop will learn your real habits and dynamically adjust your schedule while keeping your priorities intact.
-                                    </p>
+                                    <TimeSlotPicker label="Current Wake Time" value={currentWakeTime} onChange={setCurrentWakeTime} />
+                                    <TimeSlotPicker label="Current Sleep Time" value={currentSleepTime} onChange={setCurrentSleepTime} />
                                 </div>
                             </motion.div>
                         )}
 
                         {step === 4 && (
-                            <motion.div
-                                key="step4"
-                                variants={slideVariants}
-                                initial="enter" animate="center" exit="exit"
-                                transition={{ duration: 0.3 }}
-                                className="space-y-6 flex flex-col items-center justify-center text-center min-h-[250px]"
-                            >
+                            <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h2 className="text-3xl font-bold mb-2">Desired Rhythm</h2>
+                                    <p className="text-white/60">When would you *like* to wake up and sleep? The AI will help you gradually shift towards this.</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6 pt-4">
+                                    <TimeSlotPicker label="Desired Wake Time" value={desiredWakeTime} onChange={setDesiredWakeTime} />
+                                    <TimeSlotPicker label="Desired Sleep Time" value={desiredSleepTime} onChange={setDesiredSleepTime} />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === 5 && (
+                            <motion.div key="step5" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
+                                <div>
+                                    <h2 className="text-3xl font-bold mb-2">Meals & Chill Time</h2>
+                                    <p className="text-white/60">Let's block out time for the essentials.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                                    <TimeSlotPicker label="Lunch" value={lunchTime} onChange={setLunchTime} />
+                                    <TimeSlotPicker label="Dinner" value={dinnerTime} onChange={setDinnerTime} />
+                                    <TimeSlotPicker label="Chill Time" value={chillTime} onChange={setChillTime} />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === 6 && (
+                            <motion.div key="step6" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-6 flex flex-col items-center justify-center text-center min-h-[250px]">
                                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 mb-6 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.4)]">
                                     <Check className="w-10 h-10 text-white" />
                                 </div>

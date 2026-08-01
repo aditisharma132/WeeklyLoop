@@ -12,11 +12,13 @@ import FeedbackModal from "@/components/FeedbackModal";
 
 // Mock AI Data for UI scaffolding
 const mockTasks: ScheduleTask[] = [
-    { id: "1", title: "Morning Run", time: "07:00 AM", duration: "45m", status: "done", category: "health" },
-    { id: "2", title: "Deep Work: Project Alpha", time: "09:00 AM", duration: "2h", status: "in-progress", category: "work" },
-    { id: "3", title: "Spanish Lesson", time: "11:30 AM", duration: "30m", status: "upcoming", category: "learning" },
-    { id: "4", title: "Team Sync", time: "01:00 PM", duration: "1h", status: "upcoming", category: "work" },
-    { id: "5", title: "Read 20 pages", time: "08:00 PM", duration: "1h", status: "upcoming", category: "personal" },
+    { id: "1", title: "Morning Run", startTime: "07:00", endTime: "07:45", status: "done", category: "health" },
+    { id: "2", title: "Breakfast", startTime: "08:00", endTime: "08:30", status: "done", category: "meal" },
+    { id: "3", title: "Deep Work: Project Alpha", startTime: "09:00", endTime: "11:00", status: "in-progress", category: "work" },
+    { id: "4", title: "Lunch Break", startTime: "12:00", endTime: "13:00", status: "upcoming", category: "meal" },
+    { id: "5", title: "Spanish Lesson", startTime: "13:30", endTime: "14:00", status: "upcoming", category: "learning" },
+    { id: "6", title: "Team Sync", startTime: "14:30", endTime: "15:30", status: "upcoming", category: "work" },
+    { id: "7", title: "Evening Chill", startTime: "20:00", endTime: "22:00", status: "upcoming", category: "free" },
 ];
 
 const mockInsights: Insight[] = [
@@ -29,6 +31,7 @@ export default function Dashboard() {
     const [isAiProcessing, setIsAiProcessing] = useState(false);
     const [aiMessage, setAiMessage] = useState("");
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -66,6 +69,10 @@ export default function Dashboard() {
             if (data.success && data.schedule?.tasks) {
                 setTasks(data.schedule.tasks);
             }
+            if (data.deferredToTomorrow && data.deferredToTomorrow.length > 0) {
+                setToastMessage(`${data.deferredToTomorrow.length} lower priority task(s) moved to tomorrow.`);
+                setTimeout(() => setToastMessage(null), 5000);
+            }
         } catch (error) {
             console.error("Failed to rearrange schedule:", error);
         } finally {
@@ -78,6 +85,21 @@ export default function Dashboard() {
             {/* Dynamic gradients base on time of day (Mocked as bright for now) */}
             <div className="absolute top-0 right-0 w-[800px] h-[600px] bg-blue-500/5 blur-[150px] rounded-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/5 blur-[150px] rounded-full pointer-events-none" />
+
+            {/* Toast Notification */}
+            <AnimatePresence>
+                {toastMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -50 }}
+                        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-6 py-3 rounded-full font-medium shadow-xl flex items-center gap-2"
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        {toastMessage}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Header */}
             <header className="mb-8 relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">

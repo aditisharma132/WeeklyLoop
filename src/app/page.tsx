@@ -3,20 +3,27 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, LogIn } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 
 export default function Home() {
     const router = useRouter();
+    const { data: session, status } = useSession();
 
-    // Simple local profile check
     useEffect(() => {
-        // In a real app this would call an API or use context/auth
-        const profile = localStorage.getItem("weeklyloop_profile");
-        if (profile) {
+        if (status === "authenticated") {
             router.push("/dashboard");
         }
-    }, [router]);
+    }, [status, router]);
+
+    if (status === "loading") {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
@@ -49,17 +56,17 @@ export default function Home() {
                         The AI planner that actually adapts to your real life. Set your goals, and let the AI rearrange your day when things go off track.
                     </p>
 
-                    <Link href="/onboard" className="inline-block">
+                    <button onClick={() => signIn("google")} className="inline-block">
                         <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="px-8 py-4 bg-primary text-primary-foreground rounded-full font-medium text-lg flex items-center gap-3 shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-shadow hover:shadow-[0_0_30px_rgba(59,130,246,0.8)] cursor-pointer relative overflow-hidden group"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <span className="relative z-10">Start Your Loop</span>
-                            <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                            <span className="relative z-10">Sign in with Google</span>
+                            <LogIn className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
                         </motion.div>
-                    </Link>
+                    </button>
                 </div>
             </motion.div>
 

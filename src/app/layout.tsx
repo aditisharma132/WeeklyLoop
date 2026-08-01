@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
+import Sidebar from "@/components/Sidebar";
 
 const outfit = Outfit({
     subsets: ["latin"],
@@ -24,10 +26,13 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark">
-            <body className={`${outfit.variable} font-sans antialiased min-h-screen bg-background text-foreground flex flex-col`}>
-                <div className="flex-1 w-full flex flex-col">
-                    {children}
-                </div>
+            <body className={`${outfit.variable} font-sans antialiased min-h-screen bg-background text-foreground flex`}>
+                <Providers>
+                    <Sidebar />
+                    <main className="flex-1 w-full flex flex-col min-h-screen">
+                        {children}
+                    </main>
+                </Providers>
             </body>
         </html>
     );

@@ -9,17 +9,20 @@ type TaskStatus = "done" | "in-progress" | "upcoming";
 export interface ScheduleTask {
     id: string;
     title: string;
-    time: string;
-    duration: string; // e.g. "1h", "30m"
+    startTime: string;
+    endTime: string;
     status: TaskStatus;
-    category: "work" | "health" | "personal" | "learning";
+    category: "work" | "health" | "personal" | "learning" | "meal" | "snack" | "free";
 }
 
-const categoryColors = {
+const categoryColors: Record<ScheduleTask["category"], string> = {
     work: "from-blue-500/20 to-blue-500/5 border-blue-500/20 text-blue-400",
     health: "from-green-500/20 to-green-500/5 border-green-500/20 text-green-400",
     personal: "from-purple-500/20 to-purple-500/5 border-purple-500/20 text-purple-400",
     learning: "from-yellow-500/20 to-yellow-500/5 border-yellow-500/20 text-yellow-400",
+    meal: "from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400",
+    snack: "from-teal-500/20 to-teal-500/5 border-teal-500/20 text-teal-400",
+    free: "from-indigo-500/20 to-indigo-500/5 border-indigo-500/20 text-indigo-400",
 };
 
 export default function ScheduleTimeline({
@@ -34,7 +37,24 @@ export default function ScheduleTimeline({
             {/* Vertical line timeline */}
             <div className="absolute left-[11px] top-6 bottom-6 w-0.5 bg-white/5 rounded-full" />
 
-            {tasks.map((task, idx) => (
+            {tasks.map((task, idx) => {
+                // Handle 24h to 12h formatting + overnight logic
+                const formatTime = (time24: string) => {
+                    if (!time24) return "";
+                    const [h, m] = time24.split(":");
+                    let hour = parseInt(h, 10);
+                    // Support overnight (e.g., 01:00 next day)
+                    const isNextDay = hour >= 24 || (idx > 0 && hour < parseInt(tasks[idx-1].startTime.split(":")[0]));
+                    hour = hour % 24;
+                    const ampm = hour >= 12 ? "PM" : "AM";
+                    hour = hour % 12 || 12;
+                    return `${hour}:${m} ${ampm}${isNextDay ? " ↪" : ""}`;
+                };
+
+                const formattedStart = formatTime(task.startTime);
+                const formattedEnd = formatTime(task.endTime);
+
+                return (
                 <motion.div
                     key={task.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -70,15 +90,16 @@ export default function ScheduleTimeline({
                                 {task.title}
                             </h3>
                             <span className="text-xs font-mono px-2 py-1 bg-black/40 rounded-md text-white/70">
-                                {task.time}
+                                {formattedStart} - {formattedEnd}
                             </span>
                         </div>
                         <p className="text-sm opacity-70">
-                            {task.duration} • <span className="capitalize">{task.category}</span>
+                            <span className="capitalize">{task.category}</span>
                         </p>
                     </div>
                 </motion.div>
-            ))}
+                );
+            })}
         </div>
     );
 }

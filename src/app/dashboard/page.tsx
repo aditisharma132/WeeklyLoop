@@ -66,7 +66,7 @@ export default function Dashboard() {
 
     const simulateAiRearrange = async (prompt: string) => {
         if (!session) {
-            signIn("google");
+            signIn();
             return;
         }
         setIsAiProcessing(true);
@@ -180,7 +180,7 @@ export default function Dashboard() {
                     <button
                         onClick={() => {
                             if (!session) {
-                                signIn("google");
+                                signIn();
                             } else {
                                 setIsFeedbackOpen(true);
                             }
@@ -196,7 +196,7 @@ export default function Dashboard() {
 
             <VoiceInput onSubmit={(text) => {
                 if (!session) {
-                    signIn("google");
+                    signIn();
                 } else {
                     simulateAiRearrange(text);
                 }

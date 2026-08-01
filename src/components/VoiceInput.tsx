@@ -84,7 +84,7 @@ export default function VoiceInput({
 
     const handleOpenClick = () => {
         if (!session) {
-            signIn("google");
+            signIn();
             return;
         }
         setIsOpen(true);

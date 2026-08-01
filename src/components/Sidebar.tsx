@@ -75,7 +75,7 @@ export default function Sidebar() {
                     </div>
                 ) : (
                     <button
-                        onClick={() => signIn("google", { callbackUrl: '/dashboard' })}
+                        onClick={() => signIn()}
                         className="w-full flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all"
                     >
                         <LogIn className="w-5 h-5" />

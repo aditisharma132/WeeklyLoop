@@ -4,17 +4,21 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Send, X, Loader2 } from "lucide-react";
 
+import { useSession, signIn } from "next-auth/react";
+
 export default function VoiceInput({
     onSubmit
 }: {
     onSubmit: (text: string) => void
 }) {
+    const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [text, setText] = useState("");
     const [error, setError] = useState<string | null>(null);
     const recognitionRef = useRef<any>(null);
 
+    // ... (useEffect remains unchanged) ...
     useEffect(() => {
         // Initialize Web Speech API
         if (typeof window !== "undefined") {
@@ -78,12 +82,20 @@ export default function VoiceInput({
         }
     };
 
+    const handleOpenClick = () => {
+        if (!session) {
+            signIn("google");
+            return;
+        }
+        setIsOpen(true);
+    };
+
     return (
         <>
             {/* Floating Action Button */}
             <div className="fixed bottom-6 xl:bottom-12 right-6 xl:right-12 z-50">
                 <motion.button
-                    onClick={() => setIsOpen(true)}
+                    onClick={handleOpenClick}
                     className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.6)] hover:shadow-[0_0_35px_rgba(59,130,246,0.8)] transition-all animate-pulse-glow hover:scale-105"
                 >
                     <Mic className="w-8 h-8" />

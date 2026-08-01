@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { dynamoDb, SCHEDULES_TABLE, USERS_TABLE } from "@/lib/dynamodb";
 import { generateSchedule } from "@/lib/bedrock";
 import { getRearrangePrompt } from "@/lib/prompts";
+import { PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
@@ -20,14 +22,37 @@ export async function POST(req: Request) {
 
         let newSchedule;
         let deferredToTomorrow = [];
+        const now = new Date().toISOString();
+        const today = now.split("T")[0];
+
         try {
             let cleanResponse = scheduleResponse.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsed = JSON.parse(cleanResponse);
             newSchedule = { tasks: parsed.tasks };
             deferredToTomorrow = parsed.deferredToTomorrow || [];
             
-            // Here you would save deferred tasks to DynamoDB for tomorrow's date
-            // e.g. await saveDeferredTasks(userId, dateTomorrow, deferredToTomorrow);
+            // Save updated schedule for today
+            await dynamoDb.send(new PutCommand({
+                TableName: SCHEDULES_TABLE,
+                Item: {
+                    userId,
+                    date: today,
+                    tasks: newSchedule.tasks,
+                    updatedAt: now
+                }
+            }));
+
+            // If there are deferred tasks, save them to the user's profile for tomorrow's generation
+            if (deferredToTomorrow.length > 0) {
+                await dynamoDb.send(new UpdateCommand({
+                    TableName: USERS_TABLE,
+                    Key: { userId },
+                    UpdateExpression: "SET deferredTasks = :dt",
+                    ExpressionAttributeValues: {
+                        ":dt": deferredToTomorrow
+                    }
+                }));
+            }
 
         } catch (e) {
             console.error("Failed to parse schedule JSON", e);

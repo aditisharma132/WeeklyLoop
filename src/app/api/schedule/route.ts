@@ -1,31 +1,72 @@
 import { NextResponse } from "next/server";
-import { isDemoMode } from "@/lib/dynamodb";
+import { dynamoDb, USERS_TABLE, SCHEDULES_TABLE } from "@/lib/dynamodb";
+import { generateSchedule } from "@/lib/bedrock";
+import { getSchedulePrompt } from "@/lib/prompts";
+import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const userId = session.user.email;
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user?.email) {
+            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+        }
+        
+        const userId = session.user.email;
+        const now = new Date().toISOString();
+        const today = now.split("T")[0];
 
-    // In demo mode or normally, returning a default schedule to populate the dashboard if none is available
-    if (isDemoMode) {
-        return NextResponse.json({
-            success: true,
-            schedule: {
-                tasks: [
-                    { id: "1", title: "Morning Routine", startTime: "07:00", endTime: "08:00", category: "health", status: "completed" },
-                    { id: "2", title: "Deep Work Block", startTime: "09:00", endTime: "11:30", category: "work", status: "upcoming" },
-                    { id: "3", title: "Lunch", startTime: "12:00", endTime: "13:00", category: "personal", status: "upcoming" },
-                    { id: "4", title: "Meetings", startTime: "13:00", endTime: "15:00", category: "work", status: "upcoming" },
-                    { id: "5", title: "Exercise", startTime: "17:00", endTime: "18:00", category: "health", status: "upcoming" }
-                ]
-            }
-        });
-    }
+        // 1. Try to fetch today's schedule
+        const scheduleResponse = await dynamoDb.send(new GetCommand({
+            TableName: SCHEDULES_TABLE,
+            Key: { userId, date: today }
+        }));
 
-    return NextResponse.json({ success: true, schedule: { tasks: [] } });
+        if (scheduleResponse.Item) {
+            return NextResponse.json({ success: true, schedule: { tasks: scheduleResponse.Item.tasks || [] } });
+        }
+
+        // 2. If no schedule exists for today, fetch user profile to generate one
+        const userResponse = await dynamoDb.send(new GetCommand({
+            TableName: USERS_TABLE,
+            Key: { userId }
+        }));
+
+        if (!userResponse.Item) {
+            // User hasn't completed onboarding
+            return NextResponse.json({ success: true, schedule: { tasks: [] } });
+        }
+
+        const { goals, priorities, routine, mealsAndFreeTime } = userResponse.Item;
+
+        // 3. Generate a new schedule for today using Bedrock
+        const prompt = getSchedulePrompt(goals, priorities, routine, mealsAndFreeTime);
+        const bedrockResponse = await generateSchedule(prompt);
+        
+        let newSchedule;
+        try {
+            let cleanResponse = bedrockResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+            newSchedule = JSON.parse(cleanResponse);
+            
+            // Save newly generated schedule
+            await dynamoDb.send(new PutCommand({
+                TableName: SCHEDULES_TABLE,
+                Item: {
+                    userId,
+                    date: today,
+                    tasks: newSchedule.tasks || [],
+                    updatedAt: now
+                }
+            }));
+        } catch (e) {
+            newSchedule = { tasks: [] };
+            console.error("Failed to parse schedule JSON", e);
+        }
+
+        return NextResponse.json({ success: true, schedule: newSchedule });
+    } catch (error) {
+        console.error("Schedule fetch error:", error);
+        return NextResponse.json({ success: false, error: "Failed to fetch schedule" }, { status: 500 });
+    }
 }

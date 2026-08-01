@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dynamoDb, USERS_TABLE, isDemoMode, mockDb } from "@/lib/dynamodb";
+import { dynamoDb, USERS_TABLE, SCHEDULES_TABLE } from "@/lib/dynamodb";
 import { generateSchedule } from "@/lib/bedrock";
 import { getSchedulePrompt } from "@/lib/prompts";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
@@ -17,24 +17,21 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { goals, priorities, routine, mealsAndFreeTime } = body;
         const now = new Date().toISOString();
+        const today = now.split("T")[0]; // YYYY-MM-DD
 
         // Save user profile
-        if (isDemoMode) {
-            mockDb.users[userId] = { goals, priorities, routine, memberSince: now };
-        } else {
-            await dynamoDb.send(new PutCommand({
-                TableName: USERS_TABLE,
-                Item: {
-                    userId,
-                    goals,
-                    priorities,
-                    routine,
-                    mealsAndFreeTime,
-                    memberSince: now,
-                    createdAt: now
-                }
-            }));
-        }
+        await dynamoDb.send(new PutCommand({
+            TableName: USERS_TABLE,
+            Item: {
+                userId,
+                goals,
+                priorities,
+                routine,
+                mealsAndFreeTime,
+                memberSince: now,
+                createdAt: now
+            }
+        }));
 
         // Generate initial schedule
         const prompt = getSchedulePrompt(goals, priorities, routine, mealsAndFreeTime);
@@ -42,9 +39,20 @@ export async function POST(req: Request) {
         
         let initialSchedule;
         try {
-            // Bedrock might return markdown JSON block, strip it if necessary
             let cleanResponse = scheduleResponse.replace(/```json/g, '').replace(/```/g, '').trim();
             initialSchedule = JSON.parse(cleanResponse);
+            
+            // Save initial schedule to DynamoDB for today
+            await dynamoDb.send(new PutCommand({
+                TableName: SCHEDULES_TABLE,
+                Item: {
+                    userId,
+                    date: today,
+                    tasks: initialSchedule.tasks || [],
+                    updatedAt: now
+                }
+            }));
+            
         } catch (e) {
             initialSchedule = { tasks: [] };
             console.error("Failed to parse schedule JSON", e);

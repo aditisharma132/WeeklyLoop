@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, Moon } from "lucide-react";
+import { format } from "date-fns";
 import ScheduleTimeline, { ScheduleTask } from "@/components/ScheduleTimeline";
 import ProgressRings from "@/components/ProgressRings";
 import PatternInsights, { Insight } from "@/components/PatternInsights";
@@ -32,6 +33,11 @@ export default function Dashboard() {
     const [aiMessage, setAiMessage] = useState("");
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [currentDate, setCurrentDate] = useState<Date | null>(null);
+
+    useEffect(() => {
+        setCurrentDate(new Date());
+    }, []);
 
     useEffect(() => {
         const loadData = async () => {
@@ -105,7 +111,7 @@ export default function Dashboard() {
             <header className="mb-8 relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
-                        Today's Loop.
+                        {currentDate ? format(currentDate, "EEEE, MMMM do") : "Today's Loop."}
                     </h1>
                     <p className="text-white/60 text-lg">
                         Let's stay on track. 2 priorities completed so far.

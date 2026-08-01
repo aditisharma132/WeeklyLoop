@@ -122,7 +122,7 @@ export default function CalendarPage() {
                             // offset first day
                             const offset = i === 0 ? (day.getDay() === 0 ? 6 : day.getDay() - 1) : 0;
                             return (
-                                <div key={i} className={`aspect-square relative p-2 bg-white/5 rounded-xl border border-white/5 hover:border-primary/50 transition-colors ${offset ? \`col-start-\${offset + 1}\` : ''}`}>
+                                <div key={i} className={`aspect-square relative p-2 bg-white/5 rounded-xl border border-white/5 hover:border-primary/50 transition-colors ${offset ? 'col-start-' + (offset + 1) : ''}`}>
                                     <span className={`text-sm ${isSameDay(day, new Date()) ? "w-6 h-6 bg-primary rounded-full flex items-center justify-center font-bold text-white shadow-lg" : "text-white/70"}`}>
                                         {format(day, "d")}
                                     </span>
